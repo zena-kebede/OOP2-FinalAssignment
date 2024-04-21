@@ -1,0 +1,229 @@
+﻿@page "/Salaried"
+@using MySqlConnector;
+@using Final.Components.Pages.Data;
+<h1>Salaried</h1>
+
+
+<!--Html created form to find employees that are payed by a salary-->
+<label>Employee ID: </label>
+<input class="form-control"  @bind="id">
+<label>First Name </label>
+<input class="form-control"  @bind="firstName">
+<label>Last Name </label>
+<input class="form-control"  @bind="lastName">
+<br />
+<button class="btn btn-primary" @onclick="Query">Find Employees</button>
+<br />
+<br />
+
+<!--Button and display to find employees based on input information from the form above-->
+<select class="form-control" onfocus="this.selectedIndex = -1;" @onchange = "FillDetails">
+	<option value=" " selected>Please select an Employee</option>
+	@if (salaried.Count() == 0)
+	{
+		<option>Loading...</option>
+	}
+	else
+	{
+		@foreach (var employee in salaried)
+		{
+			<option value="@employee.ID"> @employee.ID, @employee.firstName,@employee.lastName,@employee.salary </option>
+		}
+	}
+</select>
+<br />
+<!--html form that displays the information of the employee that was searched for-->
+<div>
+	<label>Employee ID:</label> <input class="form-control" type="text" placeholder="employee id" @bind="employeeid">
+	<label>First Name:</label><input class="form-control" type="text" placeholder="first name" @bind="detailedfirstName">
+	<label>Last Name:</label> <input class="form-control" type="text" placeholder="last name" @bind="detailedLastName">
+	<label>date of birth:</label> <input class="form-control" type="text" placeholder="Age" @bind="DOB">
+	<label>Salary:</label> <input class="form-control" type="text" placeholder="Salary" @bind="Salary">
+</div>
+<!--This save any changes to the database that are made to the employees information-->
+<button class="btn btn-primary" @onclick="Save">Save</button>
+<br />
+<br />
+@if (validationErrorMessage != "" )
+{
+	<div class="alert alert-danger" role="alert">
+		@validationErrorMessage
+	</div>
+}
+
+@code {
+
+	//Constructors
+	string chosenEmployee;
+	string firstName;
+	string lastName;
+	int employeeid = 0;
+	string detailedfirstName = "";
+	string detailedLastName = "";
+	string DOB = "";
+	double Salary = 0;
+	string validationErrorMessage = "" ;
+	//connecting the salary class to the employee class
+	Salaried employee; 
+	//Creating a list of employees that are in the salaried database to call upon
+	List<Salaried> salaried = new List<Salaried>();
+	int id = 0;
+	public void Query()
+	{
+		if (salaried.Count() != 0)
+		{
+			salaried.Clear();
+		}
+		//Connecting the salaried page to the salaried database
+		var builder = new MySqlConnectionStringBuilder
+			{
+				Server = "localhost",
+				UserID = "root",
+				Password = "password",
+				Database = "employee",
+			};
+		using (var connection = new MySqlConnection(builder.ConnectionString))
+		{
+			try
+			{
+				//Opening the connection to the salaried database
+				connection.Open();
+				//Creating the condition of what to display is the id, firstname, and lastname are all empty when the find employee is searched for
+				if (id == 0 || id == null && firstName == null && lastName == null)
+				{
+					//Choosing the information we want to display to the user
+					string sql = $"SELECT e.employeeID, e.first_name,e.last_name, e.date_of_birth,e.address,e.postal_code,e.phone_number,e.typeEmployee,r.rateSalary FROM employee e INNER JOIN rate_of_pay r ON e.employeeID = r.employeeID Where rateSalary != 0;";
+					MySqlCommand command = new MySqlCommand(sql, connection);
+					MySqlDataReader reader = command.ExecuteReader();
+					while (reader.Read()) //Displaying the searched for employee's information
+					{
+						int ID = reader.GetInt32(0);
+						string firstName = reader.GetString(1);
+						string lastName = reader.GetString(2);
+						string DOB = reader.GetString(3);
+						string address = reader.GetString(4);
+						string phoneNumber = reader.GetString(5);
+						string postalCode = reader.GetString(6);
+						int type = reader.GetInt32(7);
+						double salary = reader.GetDouble(8);
+						Salaried s = new Salaried(ID, firstName, lastName, DOB, address, phoneNumber, postalCode, type, salary);
+						salaried.Add(s);
+					}
+				}
+				//If the condition is not met then this is the default response
+				else
+				{
+					//Choosing the information we want to display to the user
+					string sql = $"SELECT e.employeeID, e.first_name,e.last_name, e.date_of_birth,e.address,e.postal_code,e.phone_number,e.typeEmployee,r.rateSalary FROM employee e INNER JOIN rate_of_pay r ON e.employeeID = r.employeeID Where rateSalary != 0;";
+					MySqlCommand command = new MySqlCommand(sql, connection);
+					MySqlDataReader reader = command.ExecuteReader();
+					while (reader.Read()) //Displaying the searched for employee's information
+					{
+
+						int ID = reader.GetInt32(0);
+						if (ID == id)
+						{
+							string firstName = reader.GetString(1);
+							string lastName = reader.GetString(2);
+							string DOB = reader.GetString(3);
+							string address = reader.GetString(4);
+							string phoneNumber = reader.GetString(5);
+							string postalCode = reader.GetString(6);
+							int type = reader.GetInt32(7);
+							double salary = reader.GetDouble(8);
+							Salaried s = new Salaried(ID, firstName, lastName, DOB, address, phoneNumber, postalCode, type, salary);
+							salaried.Add(s);
+						}
+					}
+				}
+
+				connection.Close();
+			}
+			//Exception message if the app is unable to display the employee information
+			catch (MySqlException ex)
+			{
+				Console.WriteLine("error: " + ex.Message);
+			}
+		}
+
+
+
+	}
+	//Funtion on how to fill in the details of the searched for employee
+	public void FillDetails(ChangeEventArgs e)
+	{
+		employeeid = int.Parse(e.Value.ToString()); //Changing all the values to display them as a string to the user
+		foreach (Salaried employ in salaried)
+		{
+			if (employ.ID == employeeid)
+			{
+				detailedfirstName = employ.firstName;
+				detailedLastName = employ.lastName;
+				DOB = employ.DOB;
+				Salary = employ.salary;
+			}
+		}
+	}
+	public void Save() //Function to save employee data changes to the database
+	{
+		//Connecting to the database
+		var builder = new MySqlConnectionStringBuilder
+			{
+				Server = "localhost",
+				UserID = "root",
+				Password = "password",
+				Database = "employee",
+			};
+		using (var connection = new MySqlConnection(builder.ConnectionString))
+		{
+
+			try
+			{
+				if (Salary >= 10000 || Salary <= 0)
+				{
+					throw new ValidationExceptions("Salary cannot exceed $10,000 and must be over $0");
+				}
+				if (employeeid == 0 || detailedfirstName == "" || detailedLastName == "" || DOB == "" || Salary == 0)
+				{
+					throw new ValidationExceptions("empty field");
+				}
+				//Opening the connection to the database
+				connection.Open();
+				//Updating the employee information of salary and employeeid in the database
+				string sql = $"UPDATE rate_of_pay SET rateSalary = {Salary} where employeeID = {employeeid};";
+				MySqlCommand command = new MySqlCommand(sql, connection);
+				command.ExecuteNonQuery();
+				connection.Close(); //Closing connection to the database
+			}
+			//Exception error that is displayed to the user if the updates are unable to be saved properly
+			catch (MySqlException ex)
+			{
+				Console.WriteLine("error: " + ex.Message);
+			}
+			catch(ValidationExceptions vex)
+			{
+				Console.WriteLine("Validation Exception: " + vex.Message);
+				validationErrorMessage = vex.Message;
+			}
+		}
+		//Resetting the forms so that you can search for a new user automatically after you are done your previous actions
+		if (Salary < 10000 && Salary > 0 && employeeid != 0 && detailedfirstName != "" && detailedLastName != "" && DOB != "" && Salary != 0)
+		{
+			employeeid = 0;
+			detailedfirstName = "";
+			detailedLastName = "";
+			DOB = "";
+			Salary = 0;
+			salaried.Clear();
+			validationErrorMessage = "";
+
+		}
+
+	}
+
+
+
+
+	}
+
+

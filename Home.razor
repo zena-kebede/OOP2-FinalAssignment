@@ -1,0 +1,130 @@
+﻿@page "/"
+@using MySqlConnector;
+@using Final.Components.Pages.Data;
+
+<!--Home Page-->
+
+<h2>Adding a new employee</h2>
+
+<!--Building a form in html to Add new emplyees to the database-->
+<label>Employee ID: </label>
+<input class="form-control"  @bind="id">
+<label>First Name: </label>
+<input class="form-control"  @bind="firstName">
+<label>Last Name: </label>
+<input class="form-control"  @bind="lastName">
+<label>Date of Birth: </label>
+<input class="form-control"  @bind="DOB">
+<label>Address: </label>
+<input class="form-control"  @bind="address">
+<label>Phone Number: </label>
+<input class="form-control"  @bind="phoneNumber">
+<label>Postal Code: </label>
+<input class="form-control"  @bind="Postalcode">
+<select class="form-control" onfocus="this.selectedIndex = -1;" @bind = "type">
+	<option value= "0" selected>Salary</option>
+	<option value="1" selected> Hourly</option>
+</select>
+<label>Amount: </label>
+<input class="form-control"  @bind="amount">
+<br />
+@if (validationErrorMessage != "")
+{
+	<div class="alert alert-danger" role="alert">
+		@validationErrorMessage
+	</div>
+}
+<br />
+<button class="btn btn-primary" @onclick="Create">Add</button>
+
+
+@code {
+
+	//Construcors
+	int id = 0;
+	string firstName = "";
+	string lastName = "";
+	string DOB = "";
+	string address = "";
+	string phoneNumber = "";
+	string Postalcode = "";
+	int type = 0;
+	double amount = 0;
+	string validationErrorMessage = "";
+
+	//Method created in order to add and save new emplyees to the database
+	public void Create()
+	{
+
+		//Setting up the connection between the app and database
+		var builder = new MySqlConnectionStringBuilder
+			{
+				Server = "localhost",
+				UserID = "root",
+				Password = "password",
+				Database = "employee",
+			};
+		using (var connection = new MySqlConnection(builder.ConnectionString))
+		{
+			try
+			{
+				if (id == 0 || firstName == "" || lastName == "" || DOB == "" || address == "" || phoneNumber == "" || Postalcode == ""  || amount == 0)
+				{
+					throw new ValidationExceptions("empty field");
+
+				}
+				//Opening the connection to the database
+				connection.Open();
+				if (type == 0)
+				{
+					//Setting up how the information for employees is saved into the database
+					string sql = $"INSERT INTO employee VALUES({id},'{firstName}', '{lastName}', '{DOB}','{address}','{Postalcode}','{phoneNumber}',{type});";
+					string sql2 = $"INSERT INTO rate_of_pay VALUES({id},{type}, {0}, {amount});";
+					MySqlCommand command = new MySqlCommand(sql, connection);
+					command.ExecuteNonQuery();
+					MySqlCommand command2 = new MySqlCommand(sql2, connection);
+					command2.ExecuteNonQuery();
+					validationErrorMessage = "";
+
+
+				}
+				else
+				{
+					string sql = $"INSERT INTO employee VALUES({id},'{firstName}', '{lastName}', '{DOB}','{address}','{Postalcode}','{phoneNumber}',{type});";
+					string sql2 = $"INSERT INTO rate_of_pay VALUES({id},{type}, {amount}, {0});";
+					MySqlCommand command = new MySqlCommand(sql, connection);
+					command.ExecuteNonQuery();
+					MySqlCommand command2 = new MySqlCommand(sql2, connection);
+					command2.ExecuteNonQuery();
+					validationErrorMessage = "";
+
+				}
+				//Closing connection to the database once the new information has been stored
+				connection.Close();
+			}
+			//Exception error message to let the user know if the new emplyee was not added successfully
+			catch (MySqlException ex)
+			{
+				Console.WriteLine("error: " + ex.Message);
+			}
+			catch (ValidationExceptions vex)
+			{
+				Console.WriteLine("Validation Exception: " + vex.Message);
+				validationErrorMessage = vex.Message;
+			}
+
+
+
+		}
+
+
+
+
+
+	}
+
+
+}
+
+
+
